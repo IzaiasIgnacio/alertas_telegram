@@ -1,15 +1,19 @@
 from telethon import TelegramClient, events
 from dotenv import load_dotenv
+from telethon.sync import TelegramClient
+from telethon.sessions import StringSession
 import yagmail
 import asyncio
 import os
+
 
 # === CONFIGURAÇÕES ===
 
 load_dotenv()
 
-api_id = 22618574
-api_hash = "0cbd969ef0e780bc9ccfbc38bc947d94"
+api_id = int(os.getenv("API_ID"))
+api_hash = os.getenv("API_HASH")
+session_string = os.getenv("SESSION_STRING")
 session_name = "izaias_telethon_bot"
 
 palavras_chave = ["q800d", "q800f", "s25"]
@@ -26,7 +30,7 @@ yag = yagmail.SMTP(EMAIL_REMETENTE, SENHA_APP)
 
 # === CLIENTE TELEGRAM ===
 
-client = TelegramClient(session_name, api_id, api_hash)
+client = TelegramClient(StringSession(session_string), api_id, api_hash)
 
 @client.on(events.NewMessage(chats=None))
 async def handler(event):
