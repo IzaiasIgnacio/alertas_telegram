@@ -11,9 +11,9 @@ import os
 
 load_dotenv()
 
-api_id = int(os.getenv("API_ID"))
-api_hash = os.getenv("API_HASH")
-session_string = os.getenv("SESSION_STRING")
+api_id = int(os.getenv("api_id"))
+api_hash = os.getenv("api_hash")
+session_string = os.getenv("session_string")
 session_name = "izaias_telethon_bot"
 
 palavras_chave = ["q800d", "q800f", "s25"]
