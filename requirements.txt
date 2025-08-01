@@ -2,4 +2,3 @@ telethon
 dotenv
 yagmail
 asyncio
-os
