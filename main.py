@@ -31,6 +31,13 @@ yag = yagmail.SMTP(EMAIL_REMETENTE, SENHA_APP)
 
 client = TelegramClient(StringSession(session_string), api_id, api_hash)
 
+yag.send(
+    to=EMAIL_DESTINO,
+    subject="🚨 Palavra-chave encontrada no Telegram",
+    contents=f"teste"
+)
+print("✅ E-mail enviado com sucesso.")
+
 @client.on(events.NewMessage(chats=None))
 async def handler(event):
     try:
@@ -49,12 +56,6 @@ async def handler(event):
         print(f"🧾 Canal: {chat_title}")
         print(f"👤 Username: {username}")
         print(f"📄 Conteúdo: {msg}")
-
-        yag.send(
-            to=EMAIL_DESTINO,
-            subject="🚨 Palavra-chave encontrada no Telegram",
-            contents=f"teste"
-        )
 
         # Verifica palavras-chave
         if any(p.lower() in msg.lower() for p in palavras_chave):
