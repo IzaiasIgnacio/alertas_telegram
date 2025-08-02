@@ -6,7 +6,6 @@ import yagmail
 import asyncio
 import os
 
-
 # === CONFIGURAÇÕES ===
 
 load_dotenv()
@@ -50,6 +49,12 @@ async def handler(event):
         print(f"🧾 Canal: {chat_title}")
         print(f"👤 Username: {username}")
         print(f"📄 Conteúdo: {msg}")
+
+        yag.send(
+            to=EMAIL_DESTINO,
+            subject="🚨 Palavra-chave encontrada no Telegram",
+            contents=f"teste"
+        )
 
         # Verifica palavras-chave
         if any(p.lower() in msg.lower() for p in palavras_chave):
