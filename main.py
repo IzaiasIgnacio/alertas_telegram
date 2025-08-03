@@ -1,80 +1,65 @@
-from telethon import TelegramClient, events
-from dotenv import load_dotenv
-from telethon.sync import TelegramClient
+from telethon.sync import TelegramClient, events
 from telethon.sessions import StringSession
 import yagmail
-import asyncio
 import os
+from dotenv import load_dotenv
+from flask import Flask
+import threading
 
-# === CONFIGURAÇÕES ===
-
+# === CONFIG ===
 load_dotenv()
 
 api_id = int(os.getenv("api_id"))
 api_hash = os.getenv("api_hash")
 session_string = os.getenv("session_string")
-session_name = "izaias_telethon_bot"
+
+email_user = os.getenv("email_user")
+email_pass = os.getenv("email_app_password")
+email_dest = os.getenv("email_dest")
 
 palavras_chave = ["q800d", "q800f", "s25"]
+canais_monitorados = ["vrlofertas","ofertasepromoaquibr", "canaldeofertasecupons", "TudoPromo", "eieutil_MercadoLi", "bugsepromos", "ctofertascelulares"]
 
-# Apenas canais permitidos
-# Use usernames sem @ ou IDs numéricos
-canais_permitidos = ["vrlofertas","ofertasepromoaquibr", "canaldeofertasecupons", "TudoPromo", "eieutil_MercadoLi", "bugsepromos", "ctofertascelulares"]
+yag = yagmail.SMTP(user=email_user, password=email_pass)
 
-EMAIL_REMETENTE = "izaias.ignacio@gmail.com"
-EMAIL_DESTINO = "izaias.ignacio@outlook.com"
-SENHA_APP = os.environ.get("EMAIL_APP_PASSWORD")
+# === FLASK (para manter ativo no Replit) ===
+app_flask = Flask(__name__)
 
-yag = yagmail.SMTP(EMAIL_REMETENTE, SENHA_APP)
+@app_flask.route('/')
+def home():
+    return "Bot rodando!"
 
-# === CLIENTE TELEGRAM ===
+def start_flask():
+    app_flask.run(host="0.0.0.0", port=8080)
 
+threading.Thread(target=start_flask).start()
+
+# === TELETHON ===
 client = TelegramClient(StringSession(session_string), api_id, api_hash)
 
-yag.send(
-    to=EMAIL_DESTINO,
-    subject="🚨 Palavra-chave encontrada no Telegram",
-    contents=f"teste"
-)
-print("✅ E-mail enviado com sucesso.")
-
-@client.on(events.NewMessage(chats=None))
+@client.on(events.NewMessage)
 async def handler(event):
     try:
-        sender = await event.get_chat()
-        chat_title = getattr(sender, 'title', 'Desconhecido')
-        username = getattr(sender, 'username', None)
-        channel_id = sender.id
-        msg = event.message.message or "[sem texto]"
-
-        # Verifica se o canal está na lista permitida
-        canal_id_str = str(channel_id)
-        if username not in canais_permitidos and canal_id_str not in canais_permitidos:
-            return  # Ignora mensagens de canais não permitidos
-
-        print("\n📨 Nova mensagem recebida:")
-        print(f"🧾 Canal: {chat_title}")
-        print(f"👤 Username: {username}")
-        print(f"📄 Conteúdo: {msg}")
-
-        # Verifica palavras-chave
-        if any(p.lower() in msg.lower() for p in palavras_chave):
-            print("🚨 Palavra-chave detectada! Enviando e-mail...")
-
-            yag.send(
-                to=EMAIL_DESTINO,
-                subject="🚨 Palavra-chave encontrada no Telegram",
-                contents=f"📌 Canal: {chat_title}\n🔗 Username: @{username}\n\n📄 Mensagem:\n{msg}"
-            )
-            print("✅ E-mail enviado com sucesso.")
-
+        if event.chat and event.chat.username:
+            canal = event.chat.username.lower()
+            if canal in [c.lower() for c in canais_monitorados]:
+                texto = event.raw_text.lower()
+                if any(p in texto for p in palavras_chave):
+                    print(f"📢 Palavra-chave encontrada em @{canal}!")
+                    yag.send(
+                        to=email_dest,
+                        subject=f"🚨 Palavra-chave em @{canal}",
+                        contents=event.raw_text
+                    )
     except Exception as e:
-        print(f"⚠️ Erro no handler: {e}")
+        print(f"Erro no handler: {e}")
 
-async def main():
-    print("🤖 Iniciando Telethon com filtro de canal...")
-    await client.start()
-    print("🔍 Aguardando mensagens nos canais permitidos...")
-    await client.run_until_disconnected()
+print("🤖 Bot iniciando...")
+yag.send(
+    to=email_dest,
+    subject="✅ Bot iniciado",
+    contents="O monitor de palavras-chave está ativo."
+)
 
-asyncio.run(main())
+client.start()
+client.run_until_disconnected()
