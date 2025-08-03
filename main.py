@@ -6,60 +6,44 @@ from dotenv import load_dotenv
 from flask import Flask
 import threading
 
-# === CONFIG ===
 load_dotenv()
 
-api_id = int(os.getenv("api_id"))
-api_hash = os.getenv("api_hash")
-session_string = os.getenv("session_string")
+api_id = int(os.getenv("API_ID"))
+api_hash = os.getenv("API_HASH")
+session_string = os.getenv("SESSION_STRING")
 
-email_user = os.getenv("email_user")
-email_pass = os.getenv("email_app_password")
-email_dest = os.getenv("email_dest")
+email_origem = os.getenv("EMAIL_ORIGEM")
+email_senha = os.getenv("EMAIL_SENHA")
+email_destino = os.getenv("EMAIL_DESTINO")
 
 palavras_chave = ["q800d", "q800f", "s25"]
 canais_monitorados = ["vrlofertas","ofertasepromoaquibr", "canaldeofertasecupons", "TudoPromo", "eieutil_MercadoLi", "bugsepromos", "ctofertascelulares"]
 
-yag = yagmail.SMTP(user=email_user, password=email_pass)
+yag = yagmail.SMTP(email_origem, email_senha)
 
-# === FLASK (para manter ativo no Replit) ===
-app_flask = Flask(__name__)
-
-@app_flask.route('/')
-def home():
-    return "Bot rodando!"
-
-def start_flask():
-    app_flask.run(host="0.0.0.0", port=8080)
-
-threading.Thread(target=start_flask).start()
-
-# === TELETHON ===
 client = TelegramClient(StringSession(session_string), api_id, api_hash)
 
-@client.on(events.NewMessage)
+@client.on(events.NewMessage(chats=canais_monitorados))
 async def handler(event):
-    try:
-        if event.chat and event.chat.username:
-            canal = event.chat.username.lower()
-            if canal in [c.lower() for c in canais_monitorados]:
-                texto = event.raw_text.lower()
-                if any(p in texto for p in palavras_chave):
-                    print(f"📢 Palavra-chave encontrada em @{canal}!")
-                    yag.send(
-                        to=email_dest,
-                        subject=f"🚨 Palavra-chave em @{canal}",
-                        contents=event.raw_text
-                    )
-    except Exception as e:
-        print(f"Erro no handler: {e}")
+    texto = event.raw_text
+    if any(p.lower() in texto.lower() for p in palavras_chave):
+        print(f"🔔 Palavra-chave detectada: {texto}")
+        yag.send(to=email_destino, subject="🔔 Alerta do Telegram", contents=texto)
 
-print("🤖 Bot iniciando...")
-yag.send(
-    to=email_dest,
-    subject="✅ Bot iniciado",
-    contents="O monitor de palavras-chave está ativo."
-)
+def start_bot():
+    client.start()
+    yag.send(to=email_destino, subject="🤖 Bot Iniciado", contents="O bot de alertas está rodando!")
+    print("🤖 Bot iniciado...")
+    client.run_until_disconnected()
 
-client.start()
-client.run_until_disconnected()
+# Web server para manter online
+app = Flask("keep_alive")
+
+@app.route("/")
+def home():
+    return "Bot está rodando!"
+
+threading.Thread(target=start_bot).start()
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)

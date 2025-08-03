@@ -1,7 +1,20 @@
 services:
-  - type: worker
+  - type: web
     name: alertas-telegram
     env: python
     plan: free
-    buildCommand: ""
+    buildCommand: pip install -r requirements.txt
     startCommand: python main.py
+    envVars:
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: SESSION_STRING
+        sync: false
+      - key: EMAIL_ORIGEM
+        sync: false
+      - key: EMAIL_SENHA
+        sync: false
+      - key: EMAIL_DESTINO
+        sync: false
