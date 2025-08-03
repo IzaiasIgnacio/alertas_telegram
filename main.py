@@ -1,7 +1,8 @@
-from telethon.sync import TelegramClient, events
+from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import yagmail
 import os
+import asyncio
 from dotenv import load_dotenv
 from flask import Flask
 import threading
@@ -31,10 +32,16 @@ async def handler(event):
         yag.send(to=email_destino, subject="🔔 Alerta do Telegram", contents=texto)
 
 def start_bot():
-    client.start()
-    yag.send(to=email_destino, subject="🤖 Bot Iniciado", contents="O bot de alertas está rodando!")
-    print("🤖 Bot iniciado...")
-    client.run_until_disconnected()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    async def main():
+        await client.start()
+        yag.send(to=email_destino, subject="🤖 Bot Iniciado", contents="O bot de alertas está rodando!")
+        print("🤖 Bot iniciado...")
+        await client.run_until_disconnected()
+
+    loop.run_until_complete(main())
 
 # Web server para manter online
 app = Flask("keep_alive")
