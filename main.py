@@ -28,8 +28,11 @@ client = TelegramClient(StringSession(session_string), api_id, api_hash)
 async def handler(event):
     texto = event.raw_text
     if any(p.lower() in texto.lower() for p in palavras_chave):
-        print(f"🔔 Palavra-chave detectada: {texto}")
-        yag.send(to=email_destino, subject="🔔 Alerta do Telegram", contents=texto)
+        canal = event.chat.username or event.chat.title or "Canal desconhecido"
+        print(f"🔔 Palavra-chave detectada no canal {canal}: {texto}")
+        assunto = f"🔔 [{canal}] Alerta do Telegram"
+        yag.send(to=email_destino, subject=assunto, contents=texto)
+
 
 def start_bot():
     loop = asyncio.new_event_loop()
