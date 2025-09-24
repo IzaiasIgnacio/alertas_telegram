@@ -62,14 +62,17 @@ async def handler(event):
 def start_bot():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(client.start())
-    
-    enviar_email(
-        subject="🤖 Bot Iniciado",
-        body="O bot de alertas está rodando!"
-    )
-    print("🤖 Bot iniciado...")
-    loop.run_until_complete(client.run_until_disconnected())
+
+    async def runner():
+        await client.start()
+        enviar_email(
+            subject="🤖 Bot Iniciado",
+            body="O bot de alertas está rodando!"
+        )
+        print("🤖 Bot iniciado...")
+        await client.run_until_disconnected()
+
+    loop.run_until_complete(runner())
 
 
 
