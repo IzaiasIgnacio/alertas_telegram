@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask
 import threading
+import asyncio
 
 load_dotenv()
 
@@ -59,13 +60,17 @@ async def handler(event):
 
 
 def start_bot():
-    client.start()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(client.start())
+    
     enviar_email(
         subject="🤖 Bot Iniciado",
         body="O bot de alertas está rodando!"
     )
     print("🤖 Bot iniciado...")
-    client.run_until_disconnected()
+    loop.run_until_complete(client.run_until_disconnected())
+
 
 
 # Web server para manter online no Render
