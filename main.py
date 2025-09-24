@@ -17,7 +17,7 @@ email_origem = os.getenv("EMAIL_ORIGEM")
 email_senha = os.getenv("EMAIL_SENHA")
 email_destino = os.getenv("EMAIL_DESTINO")
 
-palavras_chave = ["q800d", "q800f", "s25", "fold 7", "a56", "astro bot"]
+palavras_chave = ["q800d", "q800f", "astro bot"]
 canais_monitorados = ["vrlofertas","ofertasepromoaquibr", "canaldeofertasecupons", "TudoPromo", "eieutil_MercadoLi", "bugsepromos", "ctofertascelulares"]
 
 yag = yagmail.SMTP(email_origem, email_senha)
