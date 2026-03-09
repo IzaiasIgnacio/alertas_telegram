@@ -20,7 +20,7 @@ MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN")
 EMAIL_DESTINO = os.getenv("EMAIL_DESTINO")
 
 # 📢 Configuração de canais e palavras-chave
-palavras_chave = ["q800d", "q800f", "astro bot", "qned70", "b650f", "s70ty", "nimbus 28"]
+palavras_chave = ["q800d", "q800f", "qned70", "nimbus 28"]
 canais_monitorados = ["vrlofertas","ofertasepromoaquibr", "canaldeofertasecupons", "TudoPromo", "eieutil_MercadoLi", "bugsepromos", "ctofertascelulares", "teniscertocupons"]
 
 # Função de envio via Mailgun API
