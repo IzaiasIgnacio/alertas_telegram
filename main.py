@@ -28,7 +28,7 @@ if not session_string and not bot_token:
     raise RuntimeError("Defina SESSION_STRING ou BOT_TOKEN para autenticar o cliente Telegram.")
 
 # 📢 Configuração de canais e palavras-chave
-palavras_chave = ["qned70", "nimbus 28", "cumulus 28", "UA7500", "GEL-CUMULUS 28"]
+palavras_chave = ["qned70", "nimbus 28", "cumulus 28", "UA7500"]
 canais_monitorados = ["vrlofertas","ofertasepromoaquibr", "canaldeofertasecupons", "TudoPromo", "eieutil_MercadoLi", "bugsepromos", "ctofertascelulares", "teniscertocupons"]
 
 # Função de envio via Mailgun API
