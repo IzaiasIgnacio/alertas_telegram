@@ -12,9 +12,11 @@ services:
         sync: false
       - key: SESSION_STRING
         sync: false
-      - key: EMAIL_ORIGEM
+      - key: BOT_TOKEN
         sync: false
-      - key: EMAIL_SENHA
+      - key: MAILGUN_API_KEY
+        sync: false
+      - key: MAILGUN_DOMAIN
         sync: false
       - key: EMAIL_DESTINO
         sync: false
