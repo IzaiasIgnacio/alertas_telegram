@@ -8,6 +8,7 @@ import threading
 import asyncio
 import time
 from datetime import datetime
+from collections import deque
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
@@ -53,6 +54,28 @@ stats = {
     "conectado_desde": None,
 }
 
+# Cache com limite de tamanho para evitar alertar duas vezes a mesma mensagem
+# (ex.: mensagem original + edição, ambas batendo na mesma palavra-chave).
+# Guarda só os IDs mais recentes; quando atinge o limite, descarta o mais antigo.
+LIMITE_CACHE_ALERTADOS = 5000
+ids_alertados_set = set()
+ids_alertados_ordem = deque()
+
+
+def ja_alertado(chat_id, message_id):
+    return (chat_id, message_id) in ids_alertados_set
+
+
+def marcar_como_alertado(chat_id, message_id):
+    chave = (chat_id, message_id)
+    if chave in ids_alertados_set:
+        return
+    ids_alertados_set.add(chave)
+    ids_alertados_ordem.append(chave)
+    if len(ids_alertados_ordem) > LIMITE_CACHE_ALERTADOS:
+        mais_antigo = ids_alertados_ordem.popleft()
+        ids_alertados_set.discard(mais_antigo)
+
 
 # Função de envio via Mailgun API
 def enviar_email(subject, body):
@@ -89,8 +112,7 @@ client = None
 if not TEST_MODE:
     client = TelegramClient(StringSession(session_string), api_id, api_hash)
 
-    @client.on(events.NewMessage(chats=canais_monitorados))
-    async def handler(event):
+    async def processar_evento(event, origem="novo"):
         texto = event.raw_text
         canal = event.chat.title or event.chat.username or f"id:{event.chat_id}"
 
@@ -98,16 +120,32 @@ if not TEST_MODE:
         stats["mensagens_recebidas"] += 1
         stats["ultima_mensagem_em"] = datetime.now().isoformat()
         preview = texto[:80].replace("\n", " ") if texto else "(sem texto)"
-        print(f"📩 [{stats['mensagens_recebidas']}] Mensagem em {canal}: {preview}")
+        tag = "✏️ editada" if origem == "edicao" else "📩"
+        print(f"{tag} [{stats['mensagens_recebidas']}] Mensagem em {canal}: {preview}")
 
         if any(p.lower() in texto.lower() for p in palavras_chave):
-            print(f"🔔 Palavra-chave detectada no canal {canal}: {texto}")
+            if ja_alertado(event.chat_id, event.id):
+                print(f"↩️ Já alertado antes (mesma mensagem, {origem}) — pulando e-mail: {canal}")
+                return
+            print(f"🔔 Palavra-chave detectada no canal {canal} ({origem}): {texto}")
             enviado = enviar_email(
                 subject=f"🔔 Alerta do Telegram - {canal}",
                 body=texto
             )
             if enviado:
                 stats["alertas_enviados"] += 1
+                marcar_como_alertado(event.chat_id, event.id)
+
+    @client.on(events.NewMessage(chats=canais_monitorados))
+    async def handler(event):
+        await processar_evento(event, origem="novo")
+
+    @client.on(events.MessageEdited(chats=canais_monitorados))
+    async def handler_edicao(event):
+        # Muitos canais postam e editam a mesma mensagem segundos depois
+        # (para adicionar imagem, corrigir preço, etc.) — sem isso, esses
+        # alertas nunca disparariam.
+        await processar_evento(event, origem="edicao")
 
 
 async def heartbeat_loop(interval_seconds=1800):
@@ -202,6 +240,8 @@ def status():
         "run_bot": RUN_BOT,
         "has_telegram_credentials": has_telegram_credentials,
         "client_conectado": client.is_connected() if client else False,
+        "cache_dedupe_tamanho": len(ids_alertados_ordem),
+        "cache_dedupe_limite": LIMITE_CACHE_ALERTADOS,
         **stats,
     }, 200
 
