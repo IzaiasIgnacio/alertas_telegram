@@ -44,7 +44,7 @@ EMAIL_DESTINO = os.getenv("EMAIL_DESTINO") or os.getenv("MAILGUN_TO") or ""
 
 # 📢 Configuração de canais e palavras-chave
 palavras_chave = ["nimbus 28", "UA7500"]
-canais_monitorados = ["vrlofertas", "ofertasepromoaquibr", "canaldeofertasecupons", "TudoPromo", "eieutil_MercadoLi", "bugsepromos", "ctofertascelulares", "teniscertocupons"]
+canais_monitorados = ["vrlofertas", "ofertasepromoaquibr", "canaldeofertasecupons", "TudoPromo", "eieutil_meli", "bugsepromos", "ctofertascelulares", "teniscertocupons"]
 
 # Contadores simples para o heartbeat
 stats = {
