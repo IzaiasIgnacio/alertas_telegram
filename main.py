@@ -43,7 +43,7 @@ MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN") or os.getenv("MAILGUN_ZONE") or ""
 EMAIL_DESTINO = os.getenv("EMAIL_DESTINO") or os.getenv("MAILGUN_TO") or ""
 
 # 📢 Configuração de canais e palavras-chave
-palavras_chave = ["UA7500", "NU850", "Nintendo Switch OLED"]
+palavras_chave = ["UA7500", "NU850", "Switch OLED", "Switch 2"]
 canais_monitorados = ["vrlofertas", "ofertasepromoaquibr", "canaldeofertasecupons", "TudoPromo", "eieutil_meli", "bugsepromos", "ctofertascelulares", "teniscertocupons"]
 
 # Contadores simples para o heartbeat
