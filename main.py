@@ -25,6 +25,30 @@ has_telegram_credentials = bool(api_id and api_hash and (session_string or bot_t
 if RUN_BOT and not has_telegram_credentials:
     raise RuntimeError("RUN_BOT=1 exige API_ID, API_HASH e SESSION_STRING ou BOT_TOKEN.")
 
+# 📧 Credenciais Mailgun
+MAILGUN_API_KEY = os.getenv("MAILGUN_API_KEY") or os.getenv("MAILGUN_KEY") or ""
+MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN") or os.getenv("MAILGUN_ZONE") or ""
+EMAIL_DESTINO = os.getenv("EMAIL_DESTINO") or os.getenv("MAILGUN_TO") or ""
+
+# 📢 Configuração de canais, palavras-chave e blacklist
+palavras_chave = ["UA7500", "NU850", "Nintendo Switch"]
+
+# 🚫 Blacklist: se a mensagem contiver QUALQUER uma destas palavras, o e-mail
+# NÃO é enviado, mesmo que alguma palavra-chave também esteja presente.
+# Comparação sem diferenciar maiúsculas/minúsculas.
+palavras_blacklist = ["Nintendo Switch Lite"]
+
+canais_monitorados = [
+    "vrlofertas",
+    "ofertasepromoaquibr",
+    "canaldeofertasecupons",
+    "TudoPromo",
+    "eieutil_meli",
+    "bugsepromos",
+    "ctofertascelulares",
+    "teniscertocupons",
+]
+
 # Log de diagnóstico de configuração — aparece sempre, em qualquer modo
 print("=" * 60)
 print(f"⚙️  Configuração ao iniciar ({datetime.now().isoformat()})")
@@ -32,24 +56,17 @@ print(f"   RUN_BOT={RUN_BOT}  TEST_MODE={TEST_MODE}")
 print(f"   has_telegram_credentials={has_telegram_credentials}")
 print(f"   api_id definido: {bool(api_id)} | api_hash definido: {bool(api_hash)}")
 print(f"   session_string definido: {bool(session_string)} | bot_token definido: {bool(bot_token)}")
+print(f"   palavras_chave={len(palavras_chave)} | palavras_blacklist={len(palavras_blacklist)}")
 print("=" * 60)
 
 if TEST_MODE:
     print("🧪 Modo de teste ativo: o bot não tentará fazer login interativo no Telegram.")
 
-# 📧 Credenciais Mailgun
-MAILGUN_API_KEY = os.getenv("MAILGUN_API_KEY") or os.getenv("MAILGUN_KEY") or ""
-MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN") or os.getenv("MAILGUN_ZONE") or ""
-EMAIL_DESTINO = os.getenv("EMAIL_DESTINO") or os.getenv("MAILGUN_TO") or ""
-
-# 📢 Configuração de canais e palavras-chave
-palavras_chave = ["UA7500", "NU850", "Switch OLED", "Switch 2"]
-canais_monitorados = ["vrlofertas", "ofertasepromoaquibr", "canaldeofertasecupons", "TudoPromo", "eieutil_meli", "bugsepromos", "ctofertascelulares", "teniscertocupons"]
-
 # Contadores simples para o heartbeat
 stats = {
     "mensagens_recebidas": 0,
     "alertas_enviados": 0,
+    "bloqueados_blacklist": 0,
     "ultima_mensagem_em": None,
     "conectado_desde": None,
 }
@@ -75,6 +92,15 @@ def marcar_como_alertado(chat_id, message_id):
     if len(ids_alertados_ordem) > LIMITE_CACHE_ALERTADOS:
         mais_antigo = ids_alertados_ordem.popleft()
         ids_alertados_set.discard(mais_antigo)
+
+
+def primeiro_termo_encontrado(texto, termos):
+    """Retorna o primeiro termo de `termos` presente em `texto` (case-insensitive), ou None."""
+    texto_lower = texto.lower()
+    for termo in termos:
+        if termo.lower() in texto_lower:
+            return termo
+    return None
 
 
 # Função de envio via Mailgun API
@@ -113,7 +139,7 @@ if not TEST_MODE:
     client = TelegramClient(StringSession(session_string), api_id, api_hash)
 
     async def processar_evento(event, origem="novo"):
-        texto = event.raw_text
+        texto = event.raw_text or ""
         canal = event.chat.title or event.chat.username or f"id:{event.chat_id}"
 
         # Log de debug: toda mensagem recebida, bate ou não com palavra-chave
@@ -123,18 +149,34 @@ if not TEST_MODE:
         tag = "✏️ editada" if origem == "edicao" else "📩"
         print(f"{tag} [{stats['mensagens_recebidas']}] Mensagem em {canal}: {preview}")
 
-        if any(p.lower() in texto.lower() for p in palavras_chave):
-            if ja_alertado(event.chat_id, event.id):
-                print(f"↩️ Já alertado antes (mesma mensagem, {origem}) — pulando e-mail: {canal}")
-                return
-            print(f"🔔 Palavra-chave detectada no canal {canal} ({origem}): {texto}")
-            enviado = enviar_email(
-                subject=f"🔔 Alerta do Telegram - {canal}",
-                body=texto
+        termo_chave = primeiro_termo_encontrado(texto, palavras_chave)
+        if not termo_chave:
+            return
+
+        # Blacklist tem prioridade sobre palavra-chave.
+        # Não marcamos como alertado: se a mensagem for editada e a palavra
+        # da blacklist sumir, o alerta ainda pode sair.
+        termo_blacklist = primeiro_termo_encontrado(texto, palavras_blacklist)
+        if termo_blacklist:
+            stats["bloqueados_blacklist"] += 1
+            print(
+                f"🚫 Ignorado pela blacklist ('{termo_blacklist}') apesar da palavra-chave "
+                f"'{termo_chave}' — {canal} ({origem})"
             )
-            if enviado:
-                stats["alertas_enviados"] += 1
-                marcar_como_alertado(event.chat_id, event.id)
+            return
+
+        if ja_alertado(event.chat_id, event.id):
+            print(f"↩️ Já alertado antes (mesma mensagem, {origem}) — pulando e-mail: {canal}")
+            return
+
+        print(f"🔔 Palavra-chave '{termo_chave}' detectada no canal {canal} ({origem}): {texto}")
+        enviado = enviar_email(
+            subject=f"🔔 Alerta do Telegram - {canal}",
+            body=texto
+        )
+        if enviado:
+            stats["alertas_enviados"] += 1
+            marcar_como_alertado(event.chat_id, event.id)
 
     @client.on(events.NewMessage(chats=canais_monitorados))
     async def handler(event):
@@ -161,6 +203,7 @@ async def heartbeat_loop(interval_seconds=1800):
             f"conectado={conectado} | "
             f"mensagens_recebidas={stats['mensagens_recebidas']} | "
             f"alertas_enviados={stats['alertas_enviados']} | "
+            f"bloqueados_blacklist={stats['bloqueados_blacklist']} | "
             f"ultima_mensagem_em={stats['ultima_mensagem_em']}"
         )
 
@@ -242,6 +285,8 @@ def status():
         "client_conectado": client.is_connected() if client else False,
         "cache_dedupe_tamanho": len(ids_alertados_ordem),
         "cache_dedupe_limite": LIMITE_CACHE_ALERTADOS,
+        "palavras_chave": len(palavras_chave),
+        "palavras_blacklist": len(palavras_blacklist),
         **stats,
     }, 200
 
