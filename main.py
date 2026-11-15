@@ -47,6 +47,7 @@ canais_monitorados = [
     "bugsepromos",
     "ctofertascelulares",
     "teniscertocupons",
+    "nintendobarato",
 ]
 
 # Log de diagnóstico de configuração — aparece sempre, em qualquer modo
