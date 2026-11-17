@@ -31,12 +31,12 @@ MAILGUN_DOMAIN = os.getenv("MAILGUN_DOMAIN") or os.getenv("MAILGUN_ZONE") or ""
 EMAIL_DESTINO = os.getenv("EMAIL_DESTINO") or os.getenv("MAILGUN_TO") or ""
 
 # 📢 Configuração de canais, palavras-chave e blacklist
-palavras_chave = ["UA7500", "NU850", "Nintendo Switch"]
+palavras_chave = ["UA7500", "NU850"]
 
 # 🚫 Blacklist: se a mensagem contiver QUALQUER uma destas palavras, o e-mail
 # NÃO é enviado, mesmo que alguma palavra-chave também esteja presente.
 # Comparação sem diferenciar maiúsculas/minúsculas.
-palavras_blacklist = ["Nintendo Switch Lite"]
+palavras_blacklist = []
 
 canais_monitorados = [
     "vrlofertas",
